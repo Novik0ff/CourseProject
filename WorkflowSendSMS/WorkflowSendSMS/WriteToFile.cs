@@ -48,7 +48,7 @@ namespace WorkflowSendSMS
 
                 return true;
             }
-            catch (Exception ex )
+            catch (Exception ex)
             {
                 throw new InvalidWorkflowException(ex.Message.ToString());
             }
