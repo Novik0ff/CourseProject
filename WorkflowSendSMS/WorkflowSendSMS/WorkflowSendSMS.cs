@@ -15,33 +15,37 @@ namespace WorkflowSendSMS
             IOrganizationServiceFactory serviceFactory = context.GetExtension<IOrganizationServiceFactory>();
             IOrganizationService service = serviceFactory.CreateOrganizationService(workflowContext.InitiatingUserId);
 
-            Guid SMSSendId = workflowContext.PrimaryEntityId;
-            var SMSsendType = workflowContext.PrimaryEntityName;
-            var SMSSend = service.Retrieve(SMSsendType, SMSSendId, new ColumnSet(true));
+            Guid smsSendId = workflowContext.PrimaryEntityId;
+            var smssendType = workflowContext.PrimaryEntityName;
+            var smsSend = service.Retrieve(smssendType, smsSendId, new ColumnSet(true));
 
-            if (SMSSend.GetAttributeValue<OptionSetValue>("new_message_status_code").Value == 1)
+
+            if (!(smsSend.GetAttributeValue<OptionSetValue>("statuscode").Value == 100000000))
             {
-                ListMembers listMembers = new ListMembers();
-                listMembers.SetListMembers(SMSSend.GetAttributeValue<EntityReference>("new_marketing_list_leads"), service);
+                return;
+            }
 
-                var entityType = listMembers.Members.Entities[0].GetAttributeValue<string>("entitytype");       
+            ListMembers listMembers = new ListMembers();
+            listMembers.SetListMembers(smsSend.GetAttributeValue<EntityReference>("new_marketing_list_leads"), service);
 
-                PhoneNumbers phoneNumbers = new PhoneNumbers();
-                phoneNumbers.SetPhoneNumberAttribute(entityType) ;
-                phoneNumbers.SetListPhoneNumbers(listMembers, entityType, service);
+            var entityType = listMembers.Members.Entities[0].GetAttributeValue<string>("entitytype");
 
-                WriteToFile writeToFile = new WriteToFile
-                {
-                    Name = SMSSend.GetAttributeValue<string>("new_name"),
-                    Message = SMSSend.GetAttributeValue<string>("new_message"),
-                    Numbers = phoneNumbers.ListPhoneNumbers
-                };
+            PhoneNumbers phoneNumbers = new PhoneNumbers();
+            phoneNumbers.SetPhoneNumberAttribute(entityType);
+            phoneNumbers.SetListPhoneNumbers(listMembers, entityType, service);
 
-                if (writeToFile.FileWriter(@"\\CRM-TRAIN\Shared\Novikov.xml"))
-                {
-                    SMSSend.GetAttributeValue<OptionSetValue>("new_message_status_code").Value = 2;
-                    service.Update(SMSSend);
-                }
+            SMSSending smsSending = new SMSSending
+            {
+                DateTime = DateTime.Now,
+                Name = smsSend.GetAttributeValue<string>("new_name"),
+                Message = smsSend.GetAttributeValue<string>("new_message"),
+                Numbers = phoneNumbers.ListPhoneNumbers
+            };
+
+            if (smsSending.WriteToFile(@"\\CRM-TRAIN\Shared\Novikov.xml"))
+            {
+                smsSend.GetAttributeValue<OptionSetValue>("statuscode").Value = 100000001;
+                service.Update(smsSend);
             }
         }
     }

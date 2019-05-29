@@ -11,34 +11,36 @@ namespace SendingSMSOnCreateMarketinList
             var factory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
             var service = factory.CreateOrganizationService(null);
             var context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
-            var SMSSendPage = (Entity)context.InputParameters["Target"];
+            var smsSendPage = (Entity)context.InputParameters["Target"];
 
-            Guid SMSSendId = SMSSendPage.Id;
-            var SMSSendType = SMSSendPage.LogicalName;
-            var SMSSendCRM = service.Retrieve(SMSSendType, SMSSendId, new ColumnSet(true));
-
-            if (SMSSendPage.GetAttributeValue<OptionSetValue>("new_message_status_code").Value == 1)
+            if (!(smsSendPage.GetAttributeValue<OptionSetValue>("statuscode").Value == 100000000))
             {
-                try
-                {
-                    var listMarket = SMSSendCRM.GetAttributeValue<EntityReference>("new_marketing_list_leads");
-                    string fetchXml =
-                    $@"<fetch mapping='logical'>
+                return;
+            }
+
+            Guid smsSendId = smsSendPage.Id;
+            var smsSendType = smsSendPage.LogicalName;
+            var smsSendCRM = service.Retrieve(smsSendType, smsSendId, new ColumnSet(true));
+
+            try
+            {
+                var listMarket = smsSendCRM.GetAttributeValue<EntityReference>("new_marketing_list_leads");
+                string fetchXml =
+                $@"<fetch mapping='logical'>
                         <entity name='listmember'>
                             <filter type='and'>
                                 <condition attribute='listid' operator='eq' value='{listMarket.Id}'/>
                             </filter>
                         </entity>
                     </fetch>";
-                    EntityCollection listMembers = service.RetrieveMultiple(new FetchExpression(fetchXml));
-                    var entityType = listMembers.Entities[0].Attributes["entitytype"];
-                }
-                catch (Exception)
-                {
-                    SMSSendPage.GetAttributeValue<OptionSetValue>("new_message_status_code").Value = 0;
-                    service.Update(SMSSendPage);
-                    throw new InvalidPluginExecutionException(@"Marketing list is empty. Add entries to list or select another list");
-                }
+                EntityCollection listMembers = service.RetrieveMultiple(new FetchExpression(fetchXml));
+                var entityType = listMembers.Entities[0].Attributes["entitytype"];
+            }
+            catch (Exception)
+            {
+                smsSendPage.GetAttributeValue<OptionSetValue>("statuscode").Value = 1;
+                service.Update(smsSendPage);
+                throw new InvalidPluginExecutionException(@"Marketing list is empty. Add entries to list or select another list");
             }
         }
     }
