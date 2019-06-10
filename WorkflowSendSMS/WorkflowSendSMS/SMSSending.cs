@@ -14,7 +14,7 @@ namespace WorkflowSendSMS
         [XmlArray("PhoneNumbers")]
         [XmlArrayItem("PhoneNumber")]
         public List<string> Numbers { get; set; }
-        public bool WriteToFile(string path)
+        public void WriteToFile(string path)
         {
             try
             {
@@ -23,7 +23,6 @@ namespace WorkflowSendSMS
                 {
                     formatter.Serialize(fs, this);
                 }
-                return true;
             }
             catch (Exception ex)
             {

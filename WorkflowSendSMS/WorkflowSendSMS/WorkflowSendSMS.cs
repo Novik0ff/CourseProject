@@ -1,8 +1,7 @@
-﻿using System;
-using System.Activities;
-using Microsoft.Xrm.Sdk;
-using Microsoft.Xrm.Sdk.Query;
+﻿using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Workflow;
+using System;
+using System.Activities;
 
 
 namespace WorkflowSendSMS
@@ -15,21 +14,10 @@ namespace WorkflowSendSMS
             IOrganizationServiceFactory serviceFactory = context.GetExtension<IOrganizationServiceFactory>();
             IOrganizationService service = serviceFactory.CreateOrganizationService(workflowContext.InitiatingUserId);
 
-            Guid smsSendId = workflowContext.PrimaryEntityId;
-            var smssendType = workflowContext.PrimaryEntityName;
-            var smsSend = service.Retrieve(smssendType, smsSendId, new ColumnSet(true));
-
-
-            if (!(smsSend.GetAttributeValue<OptionSetValue>("statuscode").Value == 100000000))
-            {
-                return;
-            }
-
             ListMembers listMembers = new ListMembers();
-            listMembers.SetListMembers(smsSend.GetAttributeValue<EntityReference>("new_marketing_list_leads"), service);
+            listMembers.SetListMembers(InNewMarketingList.Get(context), service);
 
-            var entityType = listMembers.Members.Entities[0].GetAttributeValue<string>("entitytype");
-
+            string entityType = listMembers.Members.Entities[0].GetAttributeValue<string>("entitytype");
             PhoneNumbers phoneNumbers = new PhoneNumbers();
             phoneNumbers.SetPhoneNumberAttribute(entityType);
             phoneNumbers.SetListPhoneNumbers(listMembers, entityType, service);
@@ -37,16 +25,24 @@ namespace WorkflowSendSMS
             SMSSending smsSending = new SMSSending
             {
                 DateTime = DateTime.Now,
-                Name = smsSend.GetAttributeValue<string>("new_name"),
-                Message = smsSend.GetAttributeValue<string>("new_message"),
+                Name = InNewName.Get(context),
+                Message = InNewMessage.Get(context),
                 Numbers = phoneNumbers.ListPhoneNumbers
             };
-
-            if (smsSending.WriteToFile(@"\\CRM-TRAIN\Shared\Novikov.xml"))
-            {
-                smsSend.GetAttributeValue<OptionSetValue>("statuscode").Value = 100000001;
-                service.Update(smsSend);
-            }
+            smsSending.WriteToFile(@"\\CRM-TRAIN\Shared\Novikov.xml");
         }
+
+        [RequiredArgument]
+        [Input("new_name input")]
+        [AttributeTarget("new_smsseltning", "new_name")]
+        public InArgument<string> InNewName { get; set; }
+        [RequiredArgument]
+        [Input("new_message input")]
+        [AttributeTarget("new_smsseltning", "new_message")]
+        public InArgument<string> InNewMessage { get; set; }
+        [RequiredArgument]
+        [Input("new_marketing_list_leads input")]
+        [ReferenceTarget("list")]
+        public InArgument<EntityReference> InNewMarketingList { get; set; }
     }
 }
