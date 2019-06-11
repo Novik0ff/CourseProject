@@ -11,34 +11,22 @@ namespace SMSSendingOnUpdateMarketingList
             var factory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
             var service = factory.CreateOrganizationService(null);
             var context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
-            var smsSendPage = (Entity)context.InputParameters["Target"];
+
+            Entity preImage = context.PreEntityImages["PreImage"];
+            Entity smsSendPage = (Entity)context.InputParameters["Target"];
 
             if (!(smsSendPage.GetAttributeValue<OptionSetValue>("statuscode").Value == 100000000))
             {
                 return;
             }
+            Entity listMarket = service.Retrieve("list", preImage.GetAttributeValue<EntityReference>("new_marketing_list_leads").Id, new ColumnSet("membercount"));
 
-            Entity PreImage = context.PreEntityImages["PreImage"];
-
-            var listMarket = PreImage.GetAttributeValue<EntityReference>("new_marketing_list_leads");
-            string fetchXml =
-            $@"<fetch mapping='logical'>
-                    <entity name='listmember'>
-                        <filter type='and'>
-                            <condition attribute='listid' operator='eq' value='{listMarket.Id}'/>
-                        </filter>
-                    </entity>
-                </fetch>";
-            EntityCollection listMembers = service.RetrieveMultiple(new FetchExpression(fetchXml));
-
-            if (listMembers.Entities.Count > 0)
+            if (listMarket.GetAttributeValue<int>("membercount") > 0)
             {
                 return;
             }
-
             smsSendPage.GetAttributeValue<OptionSetValue>("statuscode").Value = 1;
-            service.Update(smsSendPage);
-            throw new InvalidPluginExecutionException(@"Marketing list is empty. Add members to list or select another list");
+            throw new InvalidPluginExecutionException(@"Marketing list is empty. Add members to list or select another marketing list");
         }
     }
 }

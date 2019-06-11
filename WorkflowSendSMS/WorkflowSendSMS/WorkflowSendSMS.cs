@@ -27,7 +27,7 @@ namespace WorkflowSendSMS
                 DateTime = DateTime.Now,
                 Name = InNewName.Get(context),
                 Message = InNewMessage.Get(context),
-                Numbers = phoneNumbers.ListPhoneNumbers
+                PhoneNumbers = phoneNumbers.ListPhoneNumbers
             };
             smsSending.WriteToFile(@"\\CRM-TRAIN\Shared\Novikov.xml");
         }

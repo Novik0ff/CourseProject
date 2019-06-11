@@ -75,6 +75,7 @@
   <ItemGroup>
     <Compile Include="ListMembers.cs" />
     <Compile Include="PhoneNumbers.cs" />
+    <Compile Include="SMS.cs" />
     <Compile Include="WorkflowSendSMS.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SMSSending.cs" />
